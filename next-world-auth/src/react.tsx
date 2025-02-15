@@ -86,6 +86,9 @@ export const WorldAuthProvider = ({ children }: { children: ReactNode }) => {
         statement: 'This is my statement and here is a link https://worldcoin.com/apps',
       })
 
+      // @ts-expect-error - finalPayload is a MiniAppWalletAuthPayload
+      const user = await MiniKit.getUserByAddress(finalPayload.address)
+
       if (finalPayload.status === 'error') {
         return { success: false }
       }
@@ -96,7 +99,7 @@ export const WorldAuthProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({
           payload: finalPayload,
           nonce,
-          user: { walletAddress: finalPayload.address },
+          user
         }),
       })
       
