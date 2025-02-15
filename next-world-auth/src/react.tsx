@@ -16,6 +16,7 @@ type WorldAuthContextType = {
     user?: User
   } | null
   signIn: () => Promise<{ success: boolean }>
+  signOut: () => Promise<{ success: boolean }>
 }
 
 const initialContext: WorldAuthContextType = {
@@ -23,6 +24,7 @@ const initialContext: WorldAuthContextType = {
   isAuthenticated: false,
   session: null,
   signIn: async () => ({ success: false }),
+  signOut: async () => ({ success: false })
 }
 
 const WorldAuthContext = createContext<WorldAuthContextType>(initialContext)
@@ -68,6 +70,16 @@ export const WorldAuthProvider = ({ children }: { children: ReactNode }) => {
     }
     checkSession()
   }, [authState.isInstalled])
+
+  const signOut = async () => {
+    const res = await fetch(`/api/miniauth/logout`, {
+      method: 'PUT',
+    })
+    if(res.ok) {
+      setAuthState(prev => ({ ...prev, isAuthenticated: false, session: null }))
+    }
+    return { success: res.ok }
+  }
 
   const signIn = async () => {
     if (!authState.isInstalled) {
@@ -131,7 +143,7 @@ export const WorldAuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <WorldAuthContext.Provider value={{ ...authState, signIn }}>
+    <WorldAuthContext.Provider value={{ ...authState, signIn, signOut }}>
       {children}
     </WorldAuthContext.Provider>
   )

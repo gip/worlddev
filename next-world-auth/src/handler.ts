@@ -37,7 +37,7 @@ const setSession = (options: WorldAuthOptions0) => async (session: Session | nul
   }
 }
 
-const getSession =  (options: WorldAuthOptions0) => async (): Promise<Session | null> => {
+const getSession = (options: WorldAuthOptions0) => async (): Promise<Session | null> => {
   const cookieStore = await cookies()
   const body = cookieStore.get(options.cookieSessionName)
   const session = JSON.parse(body?.value || '{}')
@@ -61,7 +61,7 @@ const completeSiwe = (options: WorldAuthOptions0) => async (req: NextRequest) =>
   }
   try {
     const validMessage = await verifySiweMessage(payload, nonce)
-    const isUserOrbVerified = await getIsUserVerified(user.walletAddress) // Proof of humans (according to TG!)
+    const isUserOrbVerified = await getIsUserVerified(user.walletAddress)
 
     if(!validMessage.isValid) {
       await deleteSession()
@@ -103,17 +103,13 @@ const session = (options: WorldAuthOptions0) => async (req: NextRequest) => {
   return NextResponse.json(session)
 }
 
-
 export const handler = (options: WorldAuthOptions0) => async (req: NextRequest): Promise<NextResponse> => {
-  
-  console.log('HHH', req.nextUrl.pathname)
-
   switch (req.nextUrl.pathname) {
     case '/api/miniauth/nonce':
       if (req.method === 'GET') {
         const nonce = crypto.randomUUID().replace(/-/g, '')
         const cookieStore = await cookies()
-        cookieStore.set(options.cookieNonceName, nonce, { secure: true, httpOnly: true, maxAge: 60 * 10 })
+        cookieStore.set(options.cookieNonceName, nonce, { secure: true, httpOnly: true, maxAge: options.sessionMaxAge })
         return NextResponse.json({ nonce })
       }
       break
@@ -127,6 +123,12 @@ export const handler = (options: WorldAuthOptions0) => async (req: NextRequest):
         return session(options)(req)
       }
       break
+      case '/api/miniauth/logout':
+        if (req.method === 'PUT') {
+          await deleteSession()
+          return NextResponse.json({ success: true })
+        }
+        break
     default:
       break
   }
