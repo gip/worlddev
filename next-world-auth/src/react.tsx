@@ -73,7 +73,9 @@ export const WorldAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     const res = await fetch(`/api/miniauth/logout`, {
-      method: 'PUT',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
     })
     if(res.ok) {
       setAuthState(prev => ({ ...prev, isAuthenticated: false, session: null }))

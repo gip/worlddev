@@ -124,7 +124,7 @@ export const handler = (options: WorldAuthOptions0) => async (req: NextRequest):
       }
       break
       case '/api/miniauth/logout':
-        if (req.method === 'PUT') {
+        if (req.method === 'POST') {
           await deleteSession()
           return NextResponse.json({ success: true })
         }
