@@ -20,9 +20,12 @@ type IRequestPayload = {
   nonce: string
 }
 
-const deleteSession = async () => {
+const deleteSession = async (options: WorldAuthOptions0): Promise<Session | null> => {
   const cookieStore = await cookies()
-  cookieStore.delete('insecure-session')
+  const body = cookieStore.get(options.cookieSessionName)
+  const session = JSON.parse(body?.value || '{}')
+  cookieStore.delete(options.cookieSessionName)
+  return session
 }
 
 const setSession = (options: WorldAuthOptions0) => async (session: Session | null) => {
@@ -36,6 +39,23 @@ const setSession = (options: WorldAuthOptions0) => async (session: Session | nul
     cookieStore.delete(options.cookieSessionName)
   }
 }
+
+const augmentSession = (options: WorldAuthOptions0) => async (key: string, data: object): Promise<Session | null> => {
+  const cookieStore = await cookies()
+  const body = cookieStore.get(options.cookieSessionName)
+  const session = JSON.parse(body?.value || '{}')
+  if (session && session.status && session.user && session.user.walletAddress) {
+    const session1 = { ...session, [key]: data }
+    cookieStore.set(options.cookieSessionName, JSON.stringify(session1), {
+      secure: true,
+      httpOnly: true,
+    })
+    return session1
+  }
+  return null
+}
+
+
 
 const getSession = (options: WorldAuthOptions0) => async (): Promise<Session | null> => {
   const cookieStore = await cookies()
@@ -52,7 +72,7 @@ const completeSiwe = (options: WorldAuthOptions0) => async (req: NextRequest) =>
   const { payload, nonce, user } = (await req.json()) as (IRequestPayload & { user: User })
 
   if (nonce != (await cookies()).get(options.cookieNonceName)?.value) {
-      await deleteSession()
+      await deleteSession(options)
       return NextResponse.json({
       status: 'error',
       isValid: false,
@@ -64,7 +84,7 @@ const completeSiwe = (options: WorldAuthOptions0) => async (req: NextRequest) =>
     const isUserOrbVerified = await getIsUserVerified(user.walletAddress)
 
     if(!validMessage.isValid) {
-      await deleteSession()
+      await deleteSession(options)
       return NextResponse.json({
         status: 'error',
         isValid: false,
@@ -81,11 +101,13 @@ const completeSiwe = (options: WorldAuthOptions0) => async (req: NextRequest) =>
       },
     }
     setSession(options)(session)
-    await options.signedIn(session.user)
+    if(options.callbacks?.onSignIn) {
+      await options.callbacks.onSignIn(session.user)
+    }
     console.log('SES', session)
     return NextResponse.json(session)
   } catch (error: unknown) {
-    await deleteSession()
+    await deleteSession(options)
     return NextResponse.json({
       status: 'error',
       isValid: false,
@@ -125,10 +147,23 @@ export const handler = (options: WorldAuthOptions0) => async (req: NextRequest):
       break
       case '/api/miniauth/logout':
         if (req.method === 'POST') {
-          await deleteSession()
+          const session = await deleteSession(options)
+          if(options.callbacks?.onSignOut && session && session?.user) {
+            await options.callbacks.onSignOut(session?.user)
+          }
           return NextResponse.json({ success: true })
         }
         break
+        case '/api/miniauth/augment':
+          if (req.method === 'POST') {
+            const { key, data } = await req.json()
+            if (key && typeof data === 'object' && data !== null) {
+              const session = await augmentSession(options)(key, data)
+              return NextResponse.json(session)
+            }
+            return NextResponse.json({ status: 'error' }, { status: 400 })
+          }
+          break
     default:
       break
   }
