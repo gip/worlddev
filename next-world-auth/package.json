@@ -1,6 +1,6 @@
 {
   "name": "next-world-auth",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Authentication and payment abstraction for World Mini Apps with Next.js",
   "main": "dist/index.js",
   "scripts": {
@@ -20,10 +20,11 @@
   "dependencies": {
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.8",
-    "@worldcoin/minikit-js": "^1.6.0",
-    "next": "^15.1.7",
+    "@worldcoin/minikit-js": "^1.7.1",
+    "next": "^15.2.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "viem": "2.23.5"
   },
   "files": [
     "dist/",

@@ -55,9 +55,7 @@ const augmentSession = (options: WorldAuthOptions0) => async (key: string, data:
   return null
 }
 
-
-
-const getSession = (options: WorldAuthOptions0) => async (): Promise<Session | null> => {
+export const getSession = (options: WorldAuthOptions0) => async (): Promise<Session | null> => {
   const cookieStore = await cookies()
   const body = cookieStore.get(options.cookieSessionName)
   const session = JSON.parse(body?.value || '{}')
