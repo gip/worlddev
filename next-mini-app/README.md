@@ -7,4 +7,3 @@ A simple mini app template for Next.js in a few lines of code. It uses the [next
 1. Clone the repository
 2. Run `pnpm install`
 3. Run `pnpm dev`
-

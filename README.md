@@ -1,4 +1,4 @@
-# worlddev
+# WorldDev
 
 Starter kit for building World Mini Apps.
 
