@@ -1,4 +1,4 @@
-import { User } from "./handler"
+import { User } from "./types"
 
 export type Callbacks = {
   onSignIn?: (user: User) => Promise<void>
