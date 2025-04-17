@@ -3,12 +3,7 @@
 import React, { ReactNode, createContext, useEffect, useState, useContext } from 'react'
 import { MiniKit } from '@worldcoin/minikit-js'
 import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './options'
-
-type User = {
-  walletAddress: string
-  username?: string
-  isHuman?: boolean
-}
+import type { User, MyLocation } from './types'
 
 type WorldAuthContextType = {
   isInstalled: boolean
@@ -166,7 +161,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     }
   }
 
-const getLocation = async (): Promise<{ success: boolean, error?: string, latitude?: number, longitude?: number }> => {
+const getLocation = async (): Promise<MyLocation> => {
   try {
     // Check if session already has a valid location
     const location = authState.session?.extra?.location as {
@@ -199,6 +194,7 @@ const getLocation = async (): Promise<{ success: boolean, error?: string, latitu
     // Set validUntil to 10 minutes from now
     const validUntil = new Date(now.getTime() + options0.locationMaxAge * 1000).toISOString()
     await augmentSession('location', {
+      success: true,
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
       validUntil,

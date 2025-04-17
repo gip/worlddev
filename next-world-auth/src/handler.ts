@@ -2,18 +2,7 @@ import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifySiweMessage, getIsUserVerified, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js'
-
-// Session
-export type User = {
-  walletAddress: string
-  username: string
-  isHuman: boolean
-}
-
-export type Session = {
-  user: User
-  extra: { location?: Location} & Record<string, unknown>
-}
+import type { Session, User } from './types'
 
 type IRequestPayload = {
   payload: MiniAppWalletAuthSuccessPayload
