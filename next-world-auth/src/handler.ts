@@ -12,7 +12,7 @@ export type User = {
 
 export type Session = {
   user: User
-  location?: Location
+  extra: { location?: Location} & Record<string, unknown>
 }
 
 type IRequestPayload = {
@@ -45,7 +45,8 @@ const augmentSession = (options: WorldAuthOptions0) => async (key: string, data:
   const body = cookieStore.get(options.cookieSessionName)
   const session = JSON.parse(body?.value || '{}')
   if (session && session.status && session.user && session.user.walletAddress) {
-    const session1 = { ...session, [key]: data }
+    const extra = session.extra || {}
+    const session1 = { ...session, extra: { ...extra, [key]: data } }
     cookieStore.set(options.cookieSessionName, JSON.stringify(session1), {
       secure: true,
       httpOnly: true,
@@ -97,12 +98,12 @@ const completeSiwe = (options: WorldAuthOptions0) => async (req: NextRequest) =>
         isVerified: isUserOrbVerified,
         isHuman: isUserOrbVerified,
       },
+      extra: {}
     }
     setSession(options)(session)
     if(options.callbacks?.onSignIn) {
       await options.callbacks.onSignIn(session.user)
     }
-    console.log('SES', session)
     return NextResponse.json(session)
   } catch (error: unknown) {
     await deleteSession(options)
@@ -143,7 +144,8 @@ export const handler = (options: WorldAuthOptions) => async (req: NextRequest): 
       break
     case '/api/miniauth/session':
       if (req.method === 'GET') {
-        return session(options0)(req)
+        const s = await session(options0)(req)
+        return s
       }
       break
       case '/api/miniauth/logout':

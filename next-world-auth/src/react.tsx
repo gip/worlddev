@@ -15,11 +15,7 @@ type WorldAuthContextType = {
   isAuthenticated: boolean
   session: {
     user?: User
-    location?: {
-      latitude?: number
-      longitude?: number
-      validUntil?: string
-    }
+    extra?: { location?: { latitude?: number; longitude?: number; validUntil?: string } } & Record<string, unknown>
   } | null
   signIn: () => Promise<{ success: boolean }>
   signOut: () => Promise<{ success: boolean }>
@@ -69,7 +65,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
             setAuthState(prev => ({
               ...prev,
               isAuthenticated: true,
-              session: { user: s.user },
+              session: s,
             }))
           } else {
             setAuthState(prev => ({
@@ -92,7 +88,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     })
     if(res.ok) {
       const s = await res.json()
-      setAuthState(prev => ({ ...prev, session: { user: s.user } }))
+      setAuthState(prev => ({ ...prev, session: s }))
     }
     return { success: res.ok }
   }
@@ -149,7 +145,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
         setAuthState(prev => ({
           ...prev,
           isAuthenticated: true,
-          session: { user: session.user },
+          session,
         }))
         return { success: true }
       }
@@ -170,10 +166,10 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     }
   }
 
-  const getLocation = async (): Promise<{ success: boolean, error?: string, latitude?: number, longitude?: number }> => {
+const getLocation = async (): Promise<{ success: boolean, error?: string, latitude?: number, longitude?: number }> => {
   try {
     // Check if session already has a valid location
-    const location = authState.session?.location as {
+    const location = authState.session?.extra?.location as {
       latitude?: number;
       longitude?: number;
       validUntil?: string;
