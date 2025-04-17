@@ -1,14 +1,13 @@
 'use client'
 
-import Image from "next/image";
-import { useWorldAuth } from 'next-world-auth/react';
+import Image from "next/image"
+import { useWorldAuth } from 'next-world-auth/react'
 
 export default function Home() {
-
-  const { isInstalled, isAuthenticated, session, signIn, signOut } = useWorldAuth();
+  const { isInstalled, isAuthenticated, session, signIn, signOut, getLocation } = useWorldAuth()
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)] text-center">
+    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-2 sm:p-20 font-[family-name:var(--font-geist-sans)] text-center">
       <main className="flex flex-col gap-8 row-start-2 items-center">
         <div className="text-2xl font-bold">World Mini App Template</div>
         <div>Template available on <a href="https://github.com/gip/worlddev/tree/main/next-mini-app" target="_blank" rel="noopener noreferrer" style={{ color: '#0070f3', fontStyle: 'italic', textDecoration: 'underline' }}>GitHub</a></div>
@@ -18,15 +17,33 @@ export default function Home() {
         </>}
         {isInstalled && (isAuthenticated ? (
           <>
+          <hr style={{ width: "100px", margin: 10 }} />
             <div>You are logged in!</div>
-            <div>Welcome {session?.user?.username}!</div>
-            <div>Your wallet address is: {session?.user?.walletAddress}</div>
+            <div>Welcome <b>{session?.user?.username}</b>!</div>
+            <div>Your wallet address is: <span className="text-xs"><b>{session?.user?.walletAddress}</b></span></div>
             <div className="flex gap-4 items-center flex-col sm:flex-row">
               <button
                 className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
                 onClick={signOut}
               >
                 Logout
+              </button>
+              <hr style={{ width: "100px", margin: 10 }} />
+              <div>
+              Your location is: {
+                session?.extra?.location
+                  ? (<>
+                      <div>latitude: {session.extra.location.latitude}</div>
+                      <div>longitude: {session.extra.location.longitude}</div>
+                    </>)
+                  : 'unknown'
+                }
+              </div>
+              <button
+                className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
+                onClick={getLocation}
+              >
+                Get Location
               </button>
             </div>
           </>
@@ -51,5 +68,5 @@ export default function Home() {
         ))}
       </main>
     </div>
-  );
+  )
 }
