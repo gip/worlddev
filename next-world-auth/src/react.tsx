@@ -2,6 +2,7 @@
 
 import React, { ReactNode, createContext, useEffect, useState, useContext } from 'react'
 import { MiniKit } from '@worldcoin/minikit-js'
+import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './options'
 
 type User = {
   walletAddress: string
@@ -14,10 +15,16 @@ type WorldAuthContextType = {
   isAuthenticated: boolean
   session: {
     user?: User
+    location?: {
+      latitude?: number
+      longitude?: number
+      validUntil?: string
+    }
   } | null
   signIn: () => Promise<{ success: boolean }>
   signOut: () => Promise<{ success: boolean }>
   augmentSession: (key: string, data: object | null) => Promise<{ success: boolean }>
+  getLocation: () => Promise<{ success: boolean; latitude?: number; longitude?: number; error?: string }>
 }
 
 const initialContext: WorldAuthContextType = {
@@ -26,12 +33,16 @@ const initialContext: WorldAuthContextType = {
   session: null,
   signIn: async () => ({ success: false }),
   signOut: async () => ({ success: false }),
-  augmentSession: async () => ({ success: false })
+  augmentSession: async () => ({ success: false }),
+  getLocation: async () => ({ success: false })
 }
 
 const WorldAuthContext = createContext<WorldAuthContextType>(initialContext)
 
-export const WorldAuthProvider = ({ children }: { children: ReactNode }) => {
+export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOptions; children: ReactNode }) => {
+
+  const options0: WorldAuthOptions0 = { ...defaultWorldAuthOptions, ...options || {} }
+
   const [authState, setAuthState] = useState<WorldAuthContextType>(initialContext)
 
   useEffect(() => {
@@ -159,8 +170,58 @@ export const WorldAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const getLocation = async (): Promise<{ success: boolean, error?: string, latitude?: number, longitude?: number }> => {
+  try {
+    // Check if session already has a valid location
+    const location = authState.session?.location as {
+      latitude?: number;
+      longitude?: number;
+      validUntil?: string;
+    } | undefined;
+    const now = new Date();
+    if (
+      location &&
+      typeof location.latitude === 'number' &&
+      typeof location.longitude === 'number' &&
+      location.validUntil &&
+      new Date(location.validUntil) > now
+    ) {
+      return {
+        success: true,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      };
+    }
+    // Otherwise, get new location
+    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported'))
+        return
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject)
+    })
+    // Set validUntil to 10 minutes from now
+    const validUntil = new Date(now.getTime() + options0.locationMaxAge * 1000).toISOString()
+    await augmentSession('location', {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      validUntil,
+    })
+    return {
+      success: true,
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error?.message || 'Unknown error',
+    }
+  }
+}
+
   return (
-    <WorldAuthContext.Provider value={{ ...authState, signIn, signOut, augmentSession }}>
+    <WorldAuthContext.Provider value={{ ...authState, signIn, signOut, augmentSession, getLocation }}>
       {children}
     </WorldAuthContext.Provider>
   )

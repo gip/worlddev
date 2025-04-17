@@ -1,4 +1,4 @@
-import { WorldAuthOptions0 } from './options'
+import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './options'
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifySiweMessage, getIsUserVerified, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js'
@@ -123,29 +123,32 @@ const session = (options: WorldAuthOptions0) => async (req: NextRequest) => {
   return NextResponse.json(session)
 }
 
-export const handler = (options: WorldAuthOptions0) => async (req: NextRequest): Promise<NextResponse> => {
+export const handler = (options: WorldAuthOptions) => async (req: NextRequest): Promise<NextResponse> => {
+
+  const options0: WorldAuthOptions0 = { ...defaultWorldAuthOptions, ...options }
+
   switch (req.nextUrl.pathname) {
     case '/api/miniauth/nonce':
       if (req.method === 'GET') {
         const nonce = crypto.randomUUID().replace(/-/g, '')
         const cookieStore = await cookies()
-        cookieStore.set(options.cookieNonceName, nonce, { secure: true, httpOnly: true, maxAge: options.sessionMaxAge })
+        cookieStore.set(options0.cookieNonceName, nonce, { secure: true, httpOnly: true, maxAge: options0.sessionMaxAge })
         return NextResponse.json({ nonce })
       }
       break
     case '/api/miniauth/complete-siwe':
       if (req.method === 'POST') {
-        return completeSiwe(options)(req)
+        return completeSiwe(options0)(req)
       }
       break
     case '/api/miniauth/session':
       if (req.method === 'GET') {
-        return session(options)(req)
+        return session(options0)(req)
       }
       break
       case '/api/miniauth/logout':
         if (req.method === 'POST') {
-          const session = await deleteSession(options)
+          const session = await deleteSession(options0)
           if(options.callbacks?.onSignOut && session && session?.user) {
             await options.callbacks.onSignOut(session?.user)
           }
@@ -156,7 +159,7 @@ export const handler = (options: WorldAuthOptions0) => async (req: NextRequest):
           if (req.method === 'POST') {
             const { key, data } = await req.json()
             if (key && typeof data === 'object' && data !== null) {
-              const session = await augmentSession(options)(key, data)
+              const session = await augmentSession(options0)(key, data)
               return NextResponse.json(session)
             }
             return NextResponse.json({ status: 'error' }, { status: 400 })
