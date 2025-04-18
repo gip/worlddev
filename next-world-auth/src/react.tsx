@@ -10,7 +10,7 @@ type WorldAuthContextType = {
   isAuthenticated: boolean
   session: {
     user?: User
-    extra?: { location?: { latitude?: number; longitude?: number; validUntil?: string } } & Record<string, unknown>
+      extra?: Record<string, { validUntil: string } & Record<string, unknown>> & { location: MyLocation }
   } | null
   signIn: () => Promise<{ success: boolean }>
   signOut: () => Promise<{ success: boolean }>
@@ -161,29 +161,25 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     }
   }
 
-const getLocation = async (): Promise<MyLocation> => {
+const getLocation = async (force = false): Promise<MyLocation> => {
   try {
-    // Check if session already has a valid location
-    const location = authState.session?.extra?.location as {
-      latitude?: number;
-      longitude?: number;
-      validUntil?: string;
-    } | undefined;
+    const location = authState.session?.extra?.location as MyLocation | undefined
     const now = new Date();
     if (
       location &&
       typeof location.latitude === 'number' &&
       typeof location.longitude === 'number' &&
-      location.validUntil &&
-      new Date(location.validUntil) > now
+      new Date(location.validUntil) > now &&
+      !force
     ) {
       return {
         success: true,
         latitude: location.latitude,
         longitude: location.longitude,
+        validUntil: location.validUntil,
       };
     }
-    // Otherwise, get new location
+
     const position = await new Promise<GeolocationPosition>((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('Geolocation is not supported'))
@@ -191,23 +187,38 @@ const getLocation = async (): Promise<MyLocation> => {
       }
       navigator.geolocation.getCurrentPosition(resolve, reject)
     })
-    // Set validUntil to 10 minutes from now
+    
     const validUntil = new Date(now.getTime() + options0.locationMaxAge * 1000).toISOString()
-    await augmentSession('location', {
+    const locationData = {
       success: true,
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
       validUntil,
-    })
+    }
+    
+    await augmentSession('location', locationData)
+    
     return {
       success: true,
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
+      validUntil,
     }
   } catch (error: any) {
+    const errorMessage = error?.message || 'Unknown error'
+    const validUntil = new Date(2099, 0, 1).toISOString() // TODO: fix
+    const locationData = {
+      success: false,
+      error: errorMessage,
+      validUntil
+    }
+    
+    await augmentSession('location', locationData)
+    
     return {
       success: false,
-      error: error?.message || 'Unknown error',
+      error: errorMessage,
+      validUntil,
     }
   }
 }
