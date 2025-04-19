@@ -19,7 +19,13 @@ The package has been designed to make it as easy as possible to add authenticati
 import { useWorldAuth } from 'next-world-auth/react'
 
 export default function Home() {
-  const { isInstalled, isAuthenticated, session, signInWorldID, signInWallet, signOut, getLocation } = useWorldAuth
+  const { isInstalled,
+          isAuthenticated,
+          session,
+          signInWorldID,
+          signInWallet,
+          signOut,
+          getLocation } = useWorldAuth
 
   return (<>
     ...
