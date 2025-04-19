@@ -12,8 +12,8 @@ importers:
         specifier: ^15.3.1
         version: 15.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-world-auth:
-        specifier: 0.0.9
-        version: 0.0.9(typescript@5.7.3)
+        specifier: 0.0.11
+        version: 0.0.11(typescript@5.7.3)
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -1260,8 +1260,8 @@ packages:
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
-  next-world-auth@0.0.9:
-    resolution: {integrity: sha512-pwudNqVbZBD1PAJih/kGIoTZoAZKcxyrym0cZp0S89C5cIX1UhbiMs8pIKcuTxhzOvu0Gk9M0KdA6QOWu7MSBA==}
+  next-world-auth@0.0.11:
+    resolution: {integrity: sha512-7c2ZDyEn95kXdkbvyIrvIUjptffTY/GQVbu08tGL64kU2EK2JYeYa+svmRJab9oaqW0bGP0wmgIV7BboCKf++g==}
 
   next@15.3.1:
     resolution: {integrity: sha512-8+dDV0xNLOgHlyBxP1GwHGVaNXsmp+2NhZEYrXr24GWLHtt27YrBPbPuHvzlhi7kZNYjeJNR93IF5zfFu5UL0g==}
@@ -3191,7 +3191,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next-world-auth@0.0.9(typescript@5.7.3):
+  next-world-auth@0.0.11(typescript@5.7.3):
     dependencies:
       '@types/node': 22.13.4
       '@types/react': 19.0.8

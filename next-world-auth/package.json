@@ -1,6 +1,6 @@
 {
   "name": "next-world-auth",
-  "version": "0.0.9",
+  "version": "0.0.11",
   "description": "Authentication and payment abstraction for World Mini Apps with Next.js",
   "repository": "gip/worlddev",
   "main": "dist/index.js",
