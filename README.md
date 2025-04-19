@@ -25,7 +25,7 @@ export default function Home() {
           signInWorldID,
           signInWallet,
           signOut,
-          getLocation } = useWorldAuth
+          getLocation } = useWorldAuth()
 
   return (<>
     ...
