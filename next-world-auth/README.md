@@ -3,7 +3,7 @@
 Authentication and payment abstraction for World [Min Apps](https://docs.world.org/mini-apps) with [Next.js](https://nextjs.org/).
 
 Currently supported:
-* Logging in with Wallet
+* Logging in with Wallet, World ID or both
 * Getting location
 * Ability to augment session with arbitrary data
 
