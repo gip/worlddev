@@ -1,8 +1,17 @@
+
 // Session
+export type Session = {
+  isAuthenticatedWallet: boolean
+  isAuthenticatedWorldID: boolean 
+  isOrbVerified: boolean
+  user: User
+  extra: Extra
+}
+
 export type User = {
-  walletAddress: string
-  username: string
-  isHuman: boolean
+  walletAddress?: string
+  username?: string
+  appWorldID?: string
 }
   
 export type MyLocation = {
@@ -17,9 +26,4 @@ export type Extra = {
   location?: MyLocation
 } & {
   [K in Exclude<string, 'location'>]?: object & { validUntil: string }
-}
-
-export type Session = {
-  user: User
-  extra: Extra
 }

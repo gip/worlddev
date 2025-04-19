@@ -3,26 +3,27 @@
 import React, { ReactNode, createContext, useEffect, useState, useContext } from 'react'
 import { MiniKit } from '@worldcoin/minikit-js'
 import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './options'
-import type { User, MyLocation } from './types'
+import type { Session, MyLocation } from './types'
 
 type WorldAuthContextType = {
-  isInstalled: boolean
-  isAuthenticated: boolean
-  session: {
-    user?: User
-      extra?: Record<string, { validUntil: string } & Record<string, unknown>> & { location: MyLocation }
-  } | null
-  signIn: () => Promise<{ success: boolean }>
+  isLoading: boolean
+  isInstalled: boolean // Are we running in the World App?
+  isAuthenticated: boolean // Session should not be null if isAuthenticated is true
+  session:  Session | null
+  signInWorldID: (state: string | null) => Promise<{ success: false }>
+  signInWallet: () => Promise<{ success: boolean }>
   signOut: () => Promise<{ success: boolean }>
   augmentSession: (key: string, data: object | null) => Promise<{ success: boolean }>
   getLocation: () => Promise<{ success: boolean; latitude?: number; longitude?: number; error?: string }>
 }
 
 const initialContext: WorldAuthContextType = {
+  isLoading: true,
   isInstalled: false,
   isAuthenticated: false,
   session: null,
-  signIn: async () => ({ success: false }),
+  signInWorldID: async (state: string | null) => ({ success: false }),
+  signInWallet: async () => ({ success: false }),
   signOut: async () => ({ success: false }),
   augmentSession: async () => ({ success: false }),
   getLocation: async () => ({ success: false })
@@ -31,9 +32,7 @@ const initialContext: WorldAuthContextType = {
 const WorldAuthContext = createContext<WorldAuthContextType>(initialContext)
 
 export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOptions; children: ReactNode }) => {
-
   const options0: WorldAuthOptions0 = { ...defaultWorldAuthOptions, ...options || {} }
-
   const [authState, setAuthState] = useState<WorldAuthContextType>(initialContext)
 
   useEffect(() => {
@@ -56,7 +55,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
         const res = await fetch(`/api/miniauth/session`)
         if(res.ok) {
           const s = await res.json()
-          if(s.status === 'success') {
+          if(s) {
             setAuthState(prev => ({
               ...prev,
               isAuthenticated: true,
@@ -100,7 +99,28 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     return { success: res.ok }
   }
 
-  const signIn = async () => {
+  const signInWorldID = async (state: string | null = null): Promise<{ success: false }> => {
+    try {
+      const params = new URLSearchParams({
+        redirect_uri: process.env.NEXT_PUBLIC_WLD_REDIRECT_URI || '',
+        response_type: 'code',
+        response_mode: 'query',
+        scope: 'openid profile email',
+        client_id: process.env.NEXT_PUBLIC_WLD_CLIENT_ID || ''
+      })
+      if(state) {
+        params.append('state', state)
+      }
+      const location = `https://id.worldcoin.org/authorize?${params.toString()}`
+      window.location.href = location
+      // Dead - client will redirect
+    } catch (error) {
+      // Noop
+    }
+    return { success: false }
+  }
+
+  const signInWallet = async () => {
     if (!authState.isInstalled) {
       return { success: false }
     }
@@ -136,7 +156,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
       
       const session = await response.json()
 
-      if (session && session.status === 'success') {
+      if (session) {
         setAuthState(prev => ({
           ...prev,
           isAuthenticated: true,
@@ -162,6 +182,10 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
   }
 
 const getLocation = async (force = false): Promise<MyLocation> => {
+  const validUntil = new Date(2099, 0, 1).toISOString() // TODO: should that expire?
+  if (!authState.session) {
+    return { success: false, error: 'not authenticated', validUntil }
+  }
   try {
     const location = authState.session?.extra?.location as MyLocation | undefined
     const now = new Date();
@@ -206,7 +230,6 @@ const getLocation = async (force = false): Promise<MyLocation> => {
     }
   } catch (error: any) {
     const errorMessage = error?.message || 'Unknown error'
-    const validUntil = new Date(2099, 0, 1).toISOString() // TODO: fix
     const locationData = {
       success: false,
       error: errorMessage,
@@ -224,7 +247,7 @@ const getLocation = async (force = false): Promise<MyLocation> => {
 }
 
   return (
-    <WorldAuthContext.Provider value={{ ...authState, signIn, signOut, augmentSession, getLocation }}>
+    <WorldAuthContext.Provider value={{ ...authState, signInWorldID, signInWallet, signOut, augmentSession, getLocation }}>
       {children}
     </WorldAuthContext.Provider>
   )

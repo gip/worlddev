@@ -9,6 +9,12 @@ type IRequestPayload = {
   nonce: string
 }
 
+const decodeJwt = (token: string): Record<string, any> => {
+  const payload = token.split('.')[1]
+  const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+  return JSON.parse(decoded)
+}
+
 const deleteSession = async (options: WorldAuthOptions0): Promise<Session | null> => {
   const cookieStore = await cookies()
   const body = cookieStore.get(options.cookieSessionName)
@@ -29,17 +35,40 @@ const setSession = (options: WorldAuthOptions0) => async (session: Session | nul
   }
 }
 
-const augmentSession = (options: WorldAuthOptions0) => async (key: string, data: object): Promise<Session | null> => {
+const updateSession = (options: WorldAuthOptions0) => async (session: Session): Promise<Session> => {
+  const session0 = await getSession(options)()
+  let session1: Session
+  if(!session0) {
+    session1 = session
+  } else {
+    let user1 = { ...session0.user, ...session.user }
+    session1 = {
+      isAuthenticatedWallet: session0.isAuthenticatedWallet || session.isAuthenticatedWallet,
+      isAuthenticatedWorldID: session0.isAuthenticatedWorldID || session.isAuthenticatedWorldID,
+      isOrbVerified: session0.isOrbVerified || session.isOrbVerified,
+      user: user1,
+      extra: { ...session0.extra, ...session.extra }
+    }
+  }
+  await setSession(options)(session1)
+  return session1
+}
+
+
+const augmentSession = (options: WorldAuthOptions0) => async (key: string, data: object | null): Promise<Session | null> => {
   const cookieStore = await cookies()
   const body = cookieStore.get(options.cookieSessionName)
   const session = JSON.parse(body?.value || '{}')
-  if (session && session.status && session.user && session.user.walletAddress) {
+  if (session && session.user) {
     const extra = session.extra || {}
-    const session1 = { ...session, extra: { ...extra, [key]: data } }
-    cookieStore.set(options.cookieSessionName, JSON.stringify(session1), {
-      secure: true,
-      httpOnly: true,
-    })
+    let session1: Session
+    if(data) {
+      session1 = { ...session, extra: { ...extra, [key]: data } }
+    } else {
+      delete extra[key]
+      session1 = { ...session, extra }
+    }
+    await setSession(options)(session1)
     return session1
   }
   return null
@@ -50,7 +79,7 @@ export const getSession = (options: WorldAuthOptions) => async (): Promise<Sessi
   const cookieStore = await cookies()
   const body = cookieStore.get(options0.cookieSessionName)
   const session = JSON.parse(body?.value || '{}')
-  if (session && session.status && session.user && session.user.walletAddress) {
+  if (session && session.user) {
     return session
   }
   return null
@@ -69,39 +98,33 @@ const completeSiwe = (options: WorldAuthOptions) => async (req: NextRequest) => 
     })
   }
   try {
-    const validMessage = await verifySiweMessage(payload, nonce)
-    const isUserOrbVerified = await getIsUserVerified(user.walletAddress)
+    const [validMessage, isUserOrbVerified] = await Promise.all([
+      verifySiweMessage(payload, nonce),
+      getIsUserVerified(user.walletAddress!)
+    ])
 
     if(!validMessage.isValid) {
       await deleteSession(options0)
-      return NextResponse.json({
-        status: 'error',
-        isValid: false,
-        message: 'Invalid message',
-      })
+      return NextResponse.json(null)
     }
 
     const session = {
-      status: 'success',
+      isAuthenticatedWallet: true,
+      isAuthenticatedWorldID: false,
+      isOrbVerified: isUserOrbVerified,
       user : {
         ...user,
-        isVerified: isUserOrbVerified,
-        isHuman: isUserOrbVerified,
       },
       extra: {}
     }
-    setSession(options0)(session)
+    const session1 = await updateSession(options0)(session)
     if(options.callbacks?.onSignIn) {
       await options.callbacks.onSignIn(session.user)
     }
-    return NextResponse.json(session)
+    return NextResponse.json(session1)
   } catch (error: unknown) {
     await deleteSession(options0)
-    return NextResponse.json({
-      status: 'error',
-      isValid: false,
-      message: error instanceof Error ? error.message : 'Unknown error',
-    })
+    return NextResponse.json(null)
   }
 }
 
@@ -118,6 +141,49 @@ export const handler = (options: WorldAuthOptions) => async (req: NextRequest): 
   const options0: WorldAuthOptions0 = { ...defaultWorldAuthOptions, ...options }
 
   switch (req.nextUrl.pathname) {
+    case '/api/auth/callback':
+      // World ID callback
+      if (req.method === 'GET') {
+        const code = req.nextUrl.searchParams.get('code')
+        if (!code) {
+          return NextResponse.json({ status: 'error', message: 'No code provided' }, { status: 400 })
+        }
+
+        const data = new URLSearchParams()
+        data.append('code', code)
+        data.append('grant_type', 'authorization_code')
+        data.append('redirect_uri', process.env.NEXT_PUBLIC_WLD_REDIRECT_URI || '')
+
+        const clientId = process.env.WLD_CLIENT_ID
+        const clientSecret = process.env.WLD_CLIENT_SECRET
+        const res = await fetch('https://id.worldcoin.org/token', {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: data,
+        })
+        const { id_token } = await res.json()
+        const decoded = decodeJwt(id_token)
+        const { email } = decoded
+        const verificationLevel = decoded['https://id.worldcoin.org/v1']['verification_level']
+        let session: Session = {
+          isAuthenticatedWallet: false,
+          isAuthenticatedWorldID: true,
+          isOrbVerified: verificationLevel === 'orb',
+          user: {
+            appWorldID: email
+          },
+          extra: {}
+        }
+        await updateSession(options0)(session)
+        if(options.callbacks?.onSignIn) {
+          await options.callbacks.onSignIn(session.user)
+        }
+        return NextResponse.redirect(`${process.env.WLD_SERVER}/`)
+      }
+      break
     case '/api/miniauth/nonce':
       if (req.method === 'GET') {
         const nonce = crypto.randomUUID().replace(/-/g, '')
