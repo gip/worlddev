@@ -32,6 +32,7 @@ export default function Home() {
   </>)
 }
 ```
+The `session` is of type `Session | null`. Refer to the [types](https://github.com/gip/worlddev/tree/main/next-world-auth/src/types.ts) file for more information.
 
 ## Access the example miniapp
 
