@@ -4,7 +4,7 @@ export type { WorldAuthOptions }
 
 export type { Session, User, MyLocation } from './types'
 
-export { getSession }
+export { getSession as getServerSession }
 
 export default function WorldAuth(options: WorldAuthOptions) {
   const options0 = { ...defaultWorldAuthOptions, ...options }
