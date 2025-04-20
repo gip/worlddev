@@ -12,8 +12,8 @@ importers:
         specifier: ^15.3.1
         version: 15.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-world-auth:
-        specifier: 0.0.12
-        version: 0.0.12(@types/react@19.0.8)(typescript@5.7.3)
+        specifier: 0.0.14
+        version: 0.0.14(@types/react@19.0.8)(typescript@5.7.3)
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -1257,8 +1257,8 @@ packages:
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
-  next-world-auth@0.0.12:
-    resolution: {integrity: sha512-QeJBOU4ytspn6Dt4ezFyvLXUDh9kJp1hHtm4Z9Y0rs0UZ6PbIKDRJOcfwuN1tOMZfvZZo6thwPUUpwRMLg7p2A==}
+  next-world-auth@0.0.14:
+    resolution: {integrity: sha512-Q37tdctOOtm9N1ORW3H89kGqwhP0N9TfULjAWbdL9P0OXC1nUewFFcxkZMW3EZwqSsy56yM6LhZ7pucVlrWbTQ==}
 
   next@15.3.1:
     resolution: {integrity: sha512-8+dDV0xNLOgHlyBxP1GwHGVaNXsmp+2NhZEYrXr24GWLHtt27YrBPbPuHvzlhi7kZNYjeJNR93IF5zfFu5UL0g==}
@@ -3181,7 +3181,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next-world-auth@0.0.12(@types/react@19.0.8)(typescript@5.7.3):
+  next-world-auth@0.0.14(@types/react@19.0.8)(typescript@5.7.3):
     dependencies:
       '@worldcoin/minikit-js': 1.8.0(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))
       next: 15.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
