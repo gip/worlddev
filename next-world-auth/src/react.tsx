@@ -6,11 +6,13 @@ import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './
 import type { Session, MyLocation } from './types'
 
 type WorldAuthContextType = {
+  // State
   isLoading: boolean
-  isInitialized: boolean
+  isInitialized: boolean // Has the provider been initialized?
   isInstalled: boolean // Are we running in the World App?
   isAuthenticated: boolean // Session should not be null if isAuthenticated is true
   session:  Session | null
+  // Actions
   signInWorldID: (state: string | null) => Promise<{ success: false }>
   signInWallet: () => Promise<{ success: boolean }>
   signOut: () => Promise<{ success: boolean }>
@@ -62,15 +64,24 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
             setAuthState(prev => ({
               ...prev,
               isAuthenticated: true,
+              isLoading: false,
               session: s,
             }))
           } else {
             setAuthState(prev => ({
               ...prev,
               isAuthenticated: false,
+              isLoading: false,
               session: null,
             }))
           }
+        } else {
+          setAuthState(prev => ({
+            ...prev,
+            isAuthenticated: false,
+            isLoading: false,
+            session: null,
+          }))
         }
       }
     }
@@ -97,7 +108,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
       body: JSON.stringify({})
     })
     if(res.ok) {
-      setAuthState(prev => ({ ...prev, isAuthenticated: false, session: null }))
+      setAuthState(prev => ({ ...prev, isAuthenticated: false, isLoading: false, session: null }))
     }
     return { success: res.ok }
   }
