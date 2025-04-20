@@ -1,6 +1,6 @@
 {
   "name": "next-world-auth",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Authentication and payment abstraction for World Mini Apps with Next.js",
   "repository": "gip/worlddev",
   "main": "dist/index.js",
@@ -16,11 +16,11 @@
     "eslint-plugin-react": "^7.37.4",
     "globals": "^15.15.0",
     "typescript": "^5.0.0",
-    "typescript-eslint": "^8.24.0"
+    "typescript-eslint": "^8.24.0",
+    "@types/node": "^22.13.4",
+    "@types/react": "^19.0.8"
   },
   "dependencies": {
-    "@types/node": "^22.13.4",
-    "@types/react": "^19.0.8",
     "@worldcoin/minikit-js": "^1.8.0",
     "next": "^15.2.3",
     "react": "^19.0.0",

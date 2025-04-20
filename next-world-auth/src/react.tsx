@@ -7,6 +7,7 @@ import type { Session, MyLocation } from './types'
 
 type WorldAuthContextType = {
   isLoading: boolean
+  isInitialized: boolean
   isInstalled: boolean // Are we running in the World App?
   isAuthenticated: boolean // Session should not be null if isAuthenticated is true
   session:  Session | null
@@ -19,6 +20,7 @@ type WorldAuthContextType = {
 
 const initialContext: WorldAuthContextType = {
   isLoading: true,
+  isInitialized: false,
   isInstalled: false,
   isAuthenticated: false,
   session: null,
@@ -41,9 +43,10 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
         await MiniKit.install(process.env.NEXT_PUBLIC_WLD_CLIENT_ID)
         const installed = MiniKit.isInstalled()
         console.log('MiniKit installed:', installed) // Debugging log
-        setAuthState(prev => ({ ...prev, isInstalled: installed }))
+        setAuthState(prev => ({ ...prev, isInstalled: installed, isInitialized: true }))
       } catch (error) {
         console.error('MiniKit installation failed:', error)
+        setAuthState(prev => ({ ...prev, isInitialized: true }))
       }
     }
     init()
@@ -51,7 +54,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
 
   useEffect(() => {
     const checkSession = async () => {
-      if (authState.isInstalled) {
+      if (authState.isInitialized) {
         const res = await fetch(`/api/miniauth/session`)
         if(res.ok) {
           const s = await res.json()
@@ -72,7 +75,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
       }
     }
     checkSession()
-  }, [authState.isInstalled])
+  }, [authState.isInstalled, authState.isInitialized])
 
   const augmentSession = async (key: string, data: object | null): Promise<{ success: boolean }> => {
     const res = await fetch(`/api/miniauth/augment`, {
