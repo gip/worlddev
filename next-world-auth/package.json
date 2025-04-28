@@ -1,6 +1,6 @@
 {
   "name": "next-world-auth",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Authentication and payment abstraction for World Mini Apps with Next.js",
   "repository": "gip/worlddev",
   "main": "dist/index.js",
@@ -10,6 +10,12 @@
   },
   "author": "Gilles Pirio",
   "license": "MIT",
+  "dependencies": {
+    "@worldcoin/minikit-js": "^1.9.2",
+    "next": "^15.3.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
     "eslint": "^9.20.1",
@@ -19,13 +25,6 @@
     "typescript-eslint": "^8.24.0",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.8"
-  },
-  "dependencies": {
-    "@worldcoin/minikit-js": "^1.8.0",
-    "next": "^15.2.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "viem": "2.23.5"
   },
   "files": [
     "dist/",

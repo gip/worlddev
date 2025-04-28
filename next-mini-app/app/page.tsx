@@ -1,10 +1,10 @@
 'use client'
 
 import Image from "next/image"
+import { Tokens } from 'next-world-auth'
 import { useWorldAuth } from 'next-world-auth/react'
-
 export default function Home() {
-  const { isLoading, isInstalled, isAuthenticated, session, signInWorldID, signInWallet, signOut, getLocation } = useWorldAuth()
+  const { isLoading, isInstalled, isAuthenticated, session, signInWorldID, signInWallet, signOut, getLocation, pay } = useWorldAuth()
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)] text-center">
@@ -59,6 +59,12 @@ export default function Home() {
                     <div>You have authenticated with <span className="underline">World Wallet</span></div>
                     <div>Welcome <b>{session?.user?.username}</b>!</div>
                     <div>Your wallet address is: <span className="text-xs"><b>{session?.user?.walletAddress}</b></span></div>
+                    <button
+                      className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
+                      onClick={() => pay({ amount: 0.1, token: Tokens.WLD, recipient: '0x2Eb67DdFf6761bC0938e670bf1e1ed46110DDABb' })}
+                    >
+                      Tip the developer 0.1 WLD
+                    </button>
                   </>}
                   {!session.isAuthenticatedWallet && <button
                     className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"

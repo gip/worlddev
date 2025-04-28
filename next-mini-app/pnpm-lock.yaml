@@ -12,8 +12,8 @@ importers:
         specifier: ^15.3.1
         version: 15.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-world-auth:
-        specifier: 0.0.14
-        version: 0.0.14(@types/react@19.0.8)(typescript@5.7.3)
+        specifier: 0.0.15
+        version: 0.0.15(@types/react@19.0.8)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -425,10 +425,11 @@ packages:
     resolution: {integrity: sha512-GqBNAI+OyG+YXoMOI9PJDlO+MeiUnclrdjaXDYYCjmXBQi+tx0rQjNJfxwS9H6jQSVPSYaa/crcgYYMJvwdS0A==}
     engines: {node: '>=12.4'}
 
-  '@worldcoin/minikit-js@1.8.0':
-    resolution: {integrity: sha512-P6RKZqpwYoXsDYoJzvYVI5sEyVcVMrdEo9Ki2ptdE70YD0HhwCJqW56Pnop05flJqTVGdqub/woDY3fctDSMSA==}
+  '@worldcoin/minikit-js@1.9.2':
+    resolution: {integrity: sha512-WwJmsemco88mYr/kGohdL/pRhKnDWHuSn+mYk29KIc3cEB9fHWvtpTB9l34qgiMwBdQixh5IoMYTbhFNyIXLxw==}
     engines: {node: '>= 16'}
     peerDependencies:
+      react: ^17 || ^18 || ^19
       viem: ^2.23.5
 
   abitype@1.0.8:
@@ -1257,8 +1258,8 @@ packages:
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
-  next-world-auth@0.0.14:
-    resolution: {integrity: sha512-Q37tdctOOtm9N1ORW3H89kGqwhP0N9TfULjAWbdL9P0OXC1nUewFFcxkZMW3EZwqSsy56yM6LhZ7pucVlrWbTQ==}
+  next-world-auth@0.0.15:
+    resolution: {integrity: sha512-taowN6BGbB0gG/6fHthI+tBKfF88MvztiDjRcTOV/WWY6rrU8+nLr8tVjjDXx/JFGQWGBq1zsjR9z3F0gy0Ibw==}
 
   next@15.3.1:
     resolution: {integrity: sha512-8+dDV0xNLOgHlyBxP1GwHGVaNXsmp+2NhZEYrXr24GWLHtt27YrBPbPuHvzlhi7kZNYjeJNR93IF5zfFu5UL0g==}
@@ -2179,15 +2180,15 @@ snapshots:
       - typescript
       - zod
 
-  '@worldcoin/minikit-js@1.8.0(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))':
+  '@worldcoin/minikit-js@1.9.2(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))':
     dependencies:
       '@worldcoin/idkit-core': 2.0.2(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)
       abitype: 1.0.8(typescript@5.7.3)
+      react: 19.0.0
       viem: 2.23.5(typescript@5.7.3)
     transitivePeerDependencies:
       - '@types/react'
       - immer
-      - react
       - typescript
       - zod
 
@@ -3181,13 +3182,12 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next-world-auth@0.0.14(@types/react@19.0.8)(typescript@5.7.3):
+  next-world-auth@0.0.15(@types/react@19.0.8)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3)):
     dependencies:
-      '@worldcoin/minikit-js': 1.8.0(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))
+      '@worldcoin/minikit-js': 1.9.2(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))
       next: 15.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
-      viem: 2.23.5(typescript@5.7.3)
     transitivePeerDependencies:
       - '@babel/core'
       - '@opentelemetry/api'
@@ -3195,11 +3195,10 @@ snapshots:
       - '@types/react'
       - babel-plugin-macros
       - babel-plugin-react-compiler
-      - bufferutil
       - immer
       - sass
       - typescript
-      - utf-8-validate
+      - viem
       - zod
 
   next@15.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
