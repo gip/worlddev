@@ -1,7 +1,7 @@
 'use client'
 
 import React, { ReactNode, createContext, useEffect, useState, useContext } from 'react'
-import { MiniKit } from '@worldcoin/minikit-js'
+import { MiniKit, Tokens, tokenToDecimals } from '@worldcoin/minikit-js'
 import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './options'
 import type { Session, MyLocation } from './types'
 import errors from './errors'
@@ -19,6 +19,7 @@ type WorldAuthContextType = {
   signOut: () => Promise<{ success: boolean }>
   augmentSession: (key: string, data: object | null) => Promise<{ success: boolean }>
   getLocation: () => Promise<{ success: boolean; latitude?: number; longitude?: number; error?: string }>
+  pay: ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }) => Promise<{ success: boolean }>
 }
 
 const initialContext: WorldAuthContextType = {
@@ -31,7 +32,8 @@ const initialContext: WorldAuthContextType = {
   signInWallet: async () => ({ success: false }),
   signOut: async () => ({ success: false }),
   augmentSession: async () => ({ success: false }),
-  getLocation: async () => ({ success: false })
+  getLocation: async () => ({ success: false }),
+  pay: async () => ({ success: false })
 }
 
 const WorldAuthContext = createContext<WorldAuthContextType>(initialContext)
@@ -229,73 +231,85 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     }
   }
 
-const getLocation = async (force = false): Promise<MyLocation> => {
-  const validUntil = new Date(2099, 0, 1).toISOString() // TODO: should that expire?
-  if (!authState.session) {
-    return { success: false, error: 'not authenticated', validUntil }
+  const pay = async ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }): Promise<{ success: boolean }> => {
+    const payload = {
+      to: recipient,
+      reference: '0',
+      tokens: [{ symbol: token, token_amount: tokenToDecimals(amount, token).toString() }],
+      description: 'Sending WLD',
+    }
+    const { finalPayload } = await MiniKit.commandsAsync.pay(payload)
+    return { success: true }
   }
-  try {
-    const location = authState.session?.extra?.location as MyLocation | undefined
-    const now = new Date();
-    if (
-      location &&
-      typeof location.latitude === 'number' &&
-      typeof location.longitude === 'number' &&
-      new Date(location.validUntil) > now &&
-      !force
-    ) {
+  
+
+  const getLocation = async (force = false): Promise<MyLocation> => {
+    const validUntil = new Date(2099, 0, 1).toISOString() // TODO: should that expire?
+    if (!authState.session) {
+      return { success: false, error: 'not authenticated', validUntil }
+    }
+    try {
+      const location = authState.session?.extra?.location as MyLocation | undefined
+      const now = new Date();
+      if (
+        location &&
+        typeof location.latitude === 'number' &&
+        typeof location.longitude === 'number' &&
+        new Date(location.validUntil) > now &&
+        !force
+      ) {
+        return {
+          success: true,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          validUntil: location.validUntil,
+        };
+      }
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('Geolocation is not supported'))
+          return
+        }
+        navigator.geolocation.getCurrentPosition(resolve, reject)
+      })
+      
+      const validUntil = new Date(now.getTime() + options0.locationMaxAge * 1000).toISOString()
+      const locationData = {
+        success: true,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        validUntil,
+      }
+      
+      await augmentSession('location', locationData)
+      
       return {
         success: true,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        validUntil: location.validUntil,
-      };
-    }
-
-    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported'))
-        return
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        validUntil,
       }
-      navigator.geolocation.getCurrentPosition(resolve, reject)
-    })
-    
-    const validUntil = new Date(now.getTime() + options0.locationMaxAge * 1000).toISOString()
-    const locationData = {
-      success: true,
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      validUntil,
-    }
-    
-    await augmentSession('location', locationData)
-    
-    return {
-      success: true,
-      latitude: position.coords.latitude,
-      longitude: position.coords.longitude,
-      validUntil,
-    }
-  } catch (error: any) {
-    const errorMessage = error?.message || 'Unknown error'
-    const locationData = {
-      success: false,
-      error: errorMessage,
-      validUntil
-    }
-    
-    await augmentSession('location', locationData)
-    
-    return {
-      success: false,
-      error: errorMessage,
-      validUntil,
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Unknown error'
+      const locationData = {
+        success: false,
+        error: errorMessage,
+        validUntil
+      }
+      
+      await augmentSession('location', locationData)
+      
+      return {
+        success: false,
+        error: errorMessage,
+        validUntil,
+      }
     }
   }
-}
 
   return (
-    <WorldAuthContext.Provider value={{ ...authState, signInWorldID, signInWallet, signOut, augmentSession, getLocation }}>
+    <WorldAuthContext.Provider value={{ ...authState, signInWorldID, signInWallet, signOut, augmentSession, getLocation, pay }}>
       {children}
     </WorldAuthContext.Provider>
   )

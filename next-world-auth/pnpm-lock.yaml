@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@worldcoin/minikit-js':
-        specifier: ^1.8.0
-        version: 1.8.0(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))
+        specifier: ^1.9.2
+        version: 1.9.2(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))
       next:
         specifier: ^15.3.1
         version: 15.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -371,10 +371,11 @@ packages:
     resolution: {integrity: sha512-GqBNAI+OyG+YXoMOI9PJDlO+MeiUnclrdjaXDYYCjmXBQi+tx0rQjNJfxwS9H6jQSVPSYaa/crcgYYMJvwdS0A==}
     engines: {node: '>=12.4'}
 
-  '@worldcoin/minikit-js@1.8.0':
-    resolution: {integrity: sha512-P6RKZqpwYoXsDYoJzvYVI5sEyVcVMrdEo9Ki2ptdE70YD0HhwCJqW56Pnop05flJqTVGdqub/woDY3fctDSMSA==}
+  '@worldcoin/minikit-js@1.9.2':
+    resolution: {integrity: sha512-WwJmsemco88mYr/kGohdL/pRhKnDWHuSn+mYk29KIc3cEB9fHWvtpTB9l34qgiMwBdQixh5IoMYTbhFNyIXLxw==}
     engines: {node: '>= 16'}
     peerDependencies:
+      react: ^17 || ^18 || ^19
       viem: ^2.23.5
 
   abitype@1.0.8:
@@ -1681,15 +1682,15 @@ snapshots:
       - typescript
       - zod
 
-  '@worldcoin/minikit-js@1.8.0(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))':
+  '@worldcoin/minikit-js@1.9.2(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)(viem@2.23.5(typescript@5.7.3))':
     dependencies:
       '@worldcoin/idkit-core': 2.0.2(@types/react@19.0.8)(react@19.0.0)(typescript@5.7.3)
       abitype: 1.0.8(typescript@5.7.3)
+      react: 19.0.0
       viem: 2.23.5(typescript@5.7.3)
     transitivePeerDependencies:
       - '@types/react'
       - immer
-      - react
       - typescript
       - zod
 

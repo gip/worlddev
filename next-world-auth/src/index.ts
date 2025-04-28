@@ -11,3 +11,5 @@ export default function WorldAuth(options: WorldAuthOptions) {
 
   return handler(options0)
 }
+
+export { Tokens } from '@worldcoin/minikit-js'
