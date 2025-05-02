@@ -14,7 +14,7 @@ type WorldAuthContextType = {
   isAuthenticated: boolean // Session should not be null if isAuthenticated is true
   session:  Session | null
   // Actions
-  signInWorldID: (state: { state: string } | null) => Promise<{ success: false, error: string }>
+  signInWorldID: (state: { state?: string, nonce?: string }) => Promise<{ success: false, error: string }>
   signInWallet: () => Promise<{ success: boolean }>
   signOut: () => Promise<{ success: boolean }>
   augmentSession: (key: string, data: object | null) => Promise<{ success: boolean }>
@@ -28,7 +28,7 @@ const initialContext: WorldAuthContextType = {
   isInstalled: false,
   isAuthenticated: false,
   session: null,
-  signInWorldID: async (state: { state: string } | null) => ({ success: false, error: errors.ERR_NOT_IMPLEMENTED }),
+  signInWorldID: async (state: { state?: string | null, nonce?: string } | null) => ({ success: false, error: errors.ERR_NOT_IMPLEMENTED }),
   signInWallet: async () => ({ success: false }),
   signOut: async () => ({ success: false }),
   augmentSession: async () => ({ success: false }),
@@ -131,7 +131,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     return { success }
   }
 
-  const signInWorldID = async (params: { state: string } | null = null): Promise<{ success: false, error: string }> => {
+  const signInWorldID = async (params: { state?: string, nonce?: string } | null = null): Promise<{ success: false, error: string }> => {
     if (params !== null && (typeof params !== 'object' || !params.state || typeof params.state !== 'string' || Object.keys(params).length !== 1)) {
       return { success: false, error: errors.ERR_INVALID_PARAMETERS }
     }
@@ -140,10 +140,12 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
       isLoading: true,
     }))
     try {
+      const nonce = params?.nonce || crypto.randomUUID()
       const urlParams = new URLSearchParams({
         redirect_uri: process.env.NEXT_PUBLIC_WLD_REDIRECT_URI || '',
         response_type: 'code',
         response_mode: 'query',
+        nonce,
         scope: 'openid profile email',
         client_id: process.env.NEXT_PUBLIC_WLD_CLIENT_ID || ''
       })
