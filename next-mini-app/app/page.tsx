@@ -37,7 +37,7 @@ export default function Home() {
                 <div>You will need the <a href="https://worldcoin.org/world-app" target="_blank" rel="noopener noreferrer">World App</a> to sign in with World ID</div>
                 <button
                   className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-                  onClick={() => signInWorldID(null)}
+                  onClick={() => signInWorldID({})}
                 >
                   Sign in with World ID
                 </button>
@@ -80,7 +80,7 @@ export default function Home() {
                   </>}
                   {!session.isAuthenticatedWorldID && <button
                     className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-                    onClick={() => signInWorldID(null)}
+                    onClick={() => signInWorldID({})}
                   >
                     Sign in with World ID
                   </button>}
@@ -119,7 +119,7 @@ export default function Home() {
                   <hr style={{ width: "100px", margin: 10 }} />
                   <button
                     className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-                    onClick={() => signInWorldID(null)}
+                    onClick={() => signInWorldID({})}
                   >
                     Login with World ID
                   </button>
