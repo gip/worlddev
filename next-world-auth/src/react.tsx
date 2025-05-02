@@ -132,9 +132,6 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
   }
 
   const signInWorldID = async (params: { state?: string, nonce?: string } | null = null): Promise<{ success: false, error: string }> => {
-    if (params !== null && (typeof params !== 'object' || !params.state || typeof params.state !== 'string' || Object.keys(params).length !== 1)) {
-      return { success: false, error: errors.ERR_INVALID_PARAMETERS }
-    }
     setAuthState(prev => ({
       ...prev,
       isLoading: true,
