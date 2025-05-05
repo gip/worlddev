@@ -1,10 +1,19 @@
 'use client'
 
+import { useState } from "react"
 import Image from "next/image"
 import { Tokens } from 'next-world-auth'
 import { useWorldAuth } from 'next-world-auth/react'
 export default function Home() {
   const { isLoading, isInstalled, isAuthenticated, session, signInWorldID, signInWallet, signOut, getLocation, pay } = useWorldAuth()
+  const [tipAmount, setTipAmount] = useState<number | null>(null)
+
+  const tip = async (amount: number) => {
+    const r = await pay({ amount, token: Tokens.WLD, recipient: '0x2Eb67DdFf6761bC0938e670bf1e1ed46110DDABb' })
+    if(r.success) {
+      setTipAmount(amount)
+    }
+  }
 
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)] text-center">
@@ -61,10 +70,17 @@ export default function Home() {
                     <div>Your wallet address is: <span className="text-xs"><b>{session?.user?.walletAddress}</b></span></div>
                     <button
                       className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-                      onClick={() => pay({ amount: 0.1, token: Tokens.WLD, recipient: '0x2Eb67DdFf6761bC0938e670bf1e1ed46110DDABb' })}
+                      onClick={() => tip(0.1)}
                     >
                       Tip the developer 0.1 WLD
                     </button>
+                    <button
+                      className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
+                      onClick={() => tip(1.0)}
+                    >
+                      Tip the developer 1.0 WLD
+                    </button>
+                    {tipAmount && <div className="text-green-500 italic">Thanks for tipping the developer {tipAmount} WLD</div>}
                   </>}
                   {!session.isAuthenticatedWallet && <button
                     className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
