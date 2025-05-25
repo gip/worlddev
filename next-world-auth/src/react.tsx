@@ -1,6 +1,6 @@
 'use client'
 
-import React, { ReactNode, createContext, useEffect, useState, useContext } from 'react'
+import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react'
 import { MiniKit, Tokens, tokenToDecimals } from '@worldcoin/minikit-js'
 import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './options'
 import type { Session, MyLocation } from './types'
@@ -19,7 +19,7 @@ type WorldAuthContextType = {
   signOut: () => Promise<{ success: boolean }>
   augmentSession: (key: string, data: object | null) => Promise<{ success: boolean }>
   getLocation: () => Promise<{ success: boolean; latitude?: number; longitude?: number; error?: string }>
-  pay: ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }) => Promise<{ success: boolean }>
+  pay: ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }) => Promise<{ success: boolean, finalPayload: any }>
 }
 
 const initialContext: WorldAuthContextType = {
@@ -33,7 +33,7 @@ const initialContext: WorldAuthContextType = {
   signOut: async () => ({ success: false }),
   augmentSession: async () => ({ success: false }),
   getLocation: async () => ({ success: false }),
-  pay: async () => ({ success: false })
+  pay: async () => ({ success: false, finalPayload: null })
 }
 
 const WorldAuthContext = createContext<WorldAuthContextType>(initialContext)
@@ -230,7 +230,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     }
   }
 
-  const pay = async ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }): Promise<{ success: boolean }> => {
+  const pay = async ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }): Promise<{ success: boolean, finalPayload: any }> => {
     const payload = {
       to: recipient,
       reference: '0',
@@ -238,7 +238,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
       description: 'Sending WLD',
     }
     const { finalPayload } = await MiniKit.commandsAsync.pay(payload)
-    return { success: true }
+    return { success: true, finalPayload }
   }
   
 
