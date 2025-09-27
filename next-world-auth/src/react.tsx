@@ -19,7 +19,9 @@ type WorldAuthContextType = {
   signOut: () => Promise<{ success: boolean }>
   augmentSession: (key: string, data: object | null) => Promise<{ success: boolean }>
   getLocation: () => Promise<{ success: boolean; latitude?: number; longitude?: number; error?: string }>
-  pay: ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }) => Promise<{ success: boolean, finalPayload: any }>
+  pay: ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }) => Promise<{ success: boolean, finalPayload: object | null }>
+
+  minikit: MiniKit | null
 }
 
 const initialContext: WorldAuthContextType = {
@@ -28,12 +30,14 @@ const initialContext: WorldAuthContextType = {
   isInstalled: false,
   isAuthenticated: false,
   session: null,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   signInWorldID: async (state: { state?: string | null, nonce?: string } | null) => ({ success: false, error: errors.ERR_NOT_IMPLEMENTED }),
   signInWallet: async () => ({ success: false }),
   signOut: async () => ({ success: false }),
   augmentSession: async () => ({ success: false }),
   getLocation: async () => ({ success: false }),
-  pay: async () => ({ success: false, finalPayload: null })
+  pay: async () => ({ success: false, finalPayload: null }),
+  minikit: null
 }
 
 const WorldAuthContext = createContext<WorldAuthContextType>(initialContext)
@@ -152,7 +156,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
       const location = `https://id.worldcoin.org/authorize?${urlParams.toString()}`
       window.location.href = location
       // Dead - client will redirect
-    } catch (error) {
+    } catch {
       // Pass
     }
     setAuthState(prev => ({
@@ -230,7 +234,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
     }
   }
 
-  const pay = async ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }): Promise<{ success: boolean, finalPayload: any }> => {
+  const pay = async ({ amount, token, recipient }: { amount: number, token: Tokens, recipient: string }): Promise<{ success: boolean, finalPayload: object | null }> => {
     const payload = {
       to: recipient,
       reference: '0',
@@ -289,6 +293,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
         longitude: position.coords.longitude,
         validUntil,
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errorMessage = error?.message || 'Unknown error'
       const locationData = {
@@ -308,7 +313,7 @@ export const WorldAuthProvider = ({ options, children }: { options?: WorldAuthOp
   }
 
   return (
-    <WorldAuthContext.Provider value={{ ...authState, signInWorldID, signInWallet, signOut, augmentSession, getLocation, pay }}>
+    <WorldAuthContext.Provider value={{ ...authState, signInWorldID, signInWallet, signOut, augmentSession, getLocation, pay, minikit: MiniKit }}>
       {children}
     </WorldAuthContext.Provider>
   )
