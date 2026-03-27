@@ -2,44 +2,78 @@ import { WorldAuthOptions, WorldAuthOptions0, defaultWorldAuthOptions } from './
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifySiweMessage, getIsUserVerified, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js'
+import { signRequest, type IDKitResult } from '@worldcoin/idkit-core'
 import type { Session, User } from './types'
+import type { WorldIdEnvironment, WorldIdRpContextResponse } from './world-id'
+import { getWorldIdIdentifiers, isOrbVerifiedIdentifier, isWorldIdSessionResult } from './world-id'
 
 type IRequestPayload = {
   payload: MiniAppWalletAuthSuccessPayload
   nonce: string
 }
 
-type WorldIdTokenClaims = {
-  email?: string
-  'https://id.worldcoin.org/v1'?: {
-    verification_level?: string
+type WorldIdVerifyResultItem = {
+  identifier: string
+  success: boolean
+  nullifier?: string
+  code?: string
+  detail?: string
+}
+
+type WorldIdVerifyResponse = {
+  success?: boolean
+  results?: WorldIdVerifyResultItem[]
+  action?: string
+  nullifier?: string
+  created_at?: string
+  environment?: WorldIdEnvironment
+  session_id?: string
+  message?: string
+}
+
+type WorldIdServerConfig = {
+  appId: `app_${string}`
+  action: string
+  rpId: string
+  signingKey: string
+  environment: WorldIdEnvironment
+  verifyBaseUrl: string
+}
+
+const getWorldIdEnvironment = (): WorldIdEnvironment => {
+  return process.env.WLD_WORLD_ID_ENVIRONMENT === 'staging' ? 'staging' : 'production'
+}
+
+const getWorldIdServerConfig = (): { config: WorldIdServerConfig | null; error?: string } => {
+  const appId = process.env.NEXT_PUBLIC_WLD_APP_ID || process.env.NEXT_PUBLIC_WLD_CLIENT_ID
+  const rpId = process.env.WLD_RP_ID
+  const action = process.env.WLD_WORLD_ID_ACTION
+  const signingKey = process.env.WLD_RP_SIGNING_KEY
+  const missing: string[] = []
+
+  if (!appId) missing.push('NEXT_PUBLIC_WLD_APP_ID')
+  if (!rpId) missing.push('WLD_RP_ID')
+  if (!action) missing.push('WLD_WORLD_ID_ACTION')
+  if (!signingKey) missing.push('WLD_RP_SIGNING_KEY')
+
+  if (missing.length > 0) {
+    return { config: null, error: `Missing World ID 4 env vars: ${missing.join(', ')}` }
   }
-}
 
-type WorldIdTokenResponse = {
-  id_token?: string
-}
+  const environment = getWorldIdEnvironment()
 
-const decodeJwt = (token: string): WorldIdTokenClaims => {
-  const payload = token.split('.')[1]
-  if (!payload) {
-    throw new Error('Invalid JWT payload')
+  return {
+    config: {
+      appId: appId as `app_${string}`,
+      action: action!,
+      rpId: rpId!,
+      signingKey: signingKey!,
+      environment,
+      verifyBaseUrl: environment === 'staging'
+        ? 'https://staging-developer.worldcoin.org'
+        : 'https://developer.world.org',
+    },
   }
-  const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
-  return JSON.parse(decoded) as WorldIdTokenClaims
-}
-
-const getCallbackRedirectUrl = (req: NextRequest, error?: string) => {
-  const redirectUrl = new URL('/', process.env.WLD_SERVER || req.nextUrl.origin)
-  if (error) {
-    redirectUrl.searchParams.set('error', error)
-  }
-  return redirectUrl
-}
-
-const redirectCallbackError = async (req: NextRequest, options: WorldAuthOptions0, error: string) => {
-  await deleteSession(options)
-  return NextResponse.redirect(getCallbackRedirectUrl(req, error))
 }
 
 const deleteSession = async (options: WorldAuthOptions0): Promise<Session | null> => {
@@ -56,6 +90,7 @@ const setSession = (options: WorldAuthOptions0) => async (session: Session | nul
     cookieStore.set(options.cookieSessionName, JSON.stringify(session), {
       secure: true,
       httpOnly: true,
+      maxAge: options.sessionMaxAge,
     })
   } else {
     cookieStore.delete(options.cookieSessionName)
@@ -65,7 +100,7 @@ const setSession = (options: WorldAuthOptions0) => async (session: Session | nul
 const updateSession = (options: WorldAuthOptions0) => async (session: Session): Promise<Session> => {
   const session0 = await getSession(options)()
   let session1: Session
-  if(!session0) {
+  if (!session0) {
     session1 = session
   } else {
     const user1 = { ...session0.user, ...session.user }
@@ -74,13 +109,13 @@ const updateSession = (options: WorldAuthOptions0) => async (session: Session): 
       isAuthenticatedWorldID: session0.isAuthenticatedWorldID || session.isAuthenticatedWorldID,
       isOrbVerified: session0.isOrbVerified || session.isOrbVerified,
       user: user1,
-      extra: { ...session0.extra, ...session.extra }
+      extra: { ...session0.extra, ...session.extra },
+      worldId: session.worldId || session0.worldId,
     }
   }
   await setSession(options)(session1)
   return session1
 }
-
 
 const augmentSession = (options: WorldAuthOptions0) => async (key: string, data: object | null): Promise<Session | null> => {
   const cookieStore = await cookies()
@@ -89,7 +124,7 @@ const augmentSession = (options: WorldAuthOptions0) => async (key: string, data:
   if (session && session.user) {
     const extra = session.extra || {}
     let session1: Session
-    if(data) {
+    if (data) {
       session1 = { ...session, extra: { ...extra, [key]: data } }
     } else {
       delete extra[key]
@@ -117,8 +152,8 @@ const completeSiwe = (options: WorldAuthOptions) => async (req: NextRequest) => 
   const { payload, nonce, user } = (await req.json()) as (IRequestPayload & { user: User })
 
   if (nonce !== (await cookies()).get(options0.cookieNonceName)?.value) {
-      await deleteSession(options0)
-      return NextResponse.json({
+    await deleteSession(options0)
+    return NextResponse.json({
       status: 'error',
       isValid: false,
       message: 'Invalid nonce',
@@ -130,7 +165,7 @@ const completeSiwe = (options: WorldAuthOptions) => async (req: NextRequest) => 
       getIsUserVerified(user.walletAddress!)
     ])
 
-    if(!validMessage.isValid) {
+    if (!validMessage.isValid) {
       await deleteSession(options0)
       return NextResponse.json(null)
     }
@@ -139,20 +174,110 @@ const completeSiwe = (options: WorldAuthOptions) => async (req: NextRequest) => 
       isAuthenticatedWallet: true,
       isAuthenticatedWorldID: false,
       isOrbVerified: isUserOrbVerified,
-      user : {
+      user: {
         ...user,
       },
       extra: {}
     }
     const session1 = await updateSession(options0)(session)
-    if(options.callbacks?.onSignIn) {
-      await options.callbacks.onSignIn(session.user)
+    if (options.callbacks?.onSignIn) {
+      await options.callbacks.onSignIn(session1.user)
     }
     return NextResponse.json(session1)
   } catch {
     await deleteSession(options0)
     return NextResponse.json(null)
   }
+}
+
+const getWorldIdRpContext = async () => {
+  const { config, error } = getWorldIdServerConfig()
+  if (!config) {
+    return NextResponse.json({ success: false, error }, { status: 500 })
+  }
+
+  const rpSignature = signRequest(config.action, config.signingKey)
+
+  const response: WorldIdRpContextResponse = {
+    appId: config.appId,
+    action: config.action,
+    environment: config.environment,
+    rpContext: {
+      rp_id: config.rpId,
+      nonce: rpSignature.nonce,
+      created_at: rpSignature.createdAt,
+      expires_at: rpSignature.expiresAt,
+      signature: rpSignature.sig,
+    },
+  }
+
+  return NextResponse.json(response)
+}
+
+const verifyWorldId = (options: WorldAuthOptions0) => async (req: NextRequest) => {
+  const { config, error } = getWorldIdServerConfig()
+  if (!config) {
+    return NextResponse.json({ success: false, error }, { status: 500 })
+  }
+
+  const idkitResponse = (await req.json()) as IDKitResult
+  const verifyResponse = await fetch(`${config.verifyBaseUrl}/api/v4/verify/${config.rpId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(idkitResponse),
+  })
+
+  let payload: WorldIdVerifyResponse | null = null
+  try {
+    payload = await verifyResponse.json() as WorldIdVerifyResponse
+  } catch {
+    payload = null
+  }
+
+  if (!verifyResponse.ok || !payload?.success) {
+    return NextResponse.json(payload || { success: false, error: 'World ID verification failed' }, {
+      status: verifyResponse.ok ? 400 : verifyResponse.status,
+    })
+  }
+
+  const resultIdentifiers = payload.results
+    ?.filter((result) => result.success)
+    .map((result) => result.identifier) || []
+  const responseIdentifiers = idkitResponse.responses.map((response) => response.identifier)
+  const identifiers = getWorldIdIdentifiers([...resultIdentifiers, ...responseIdentifiers])
+  const sessionId = payload.session_id || (isWorldIdSessionResult(idkitResponse) ? idkitResponse.session_id : undefined)
+
+  if (!sessionId) {
+    return NextResponse.json({
+      success: false,
+      error: 'World ID verification succeeded but no session_id was returned',
+      verify: payload,
+    }, { status: 502 })
+  }
+
+  const session: Session = {
+    isAuthenticatedWallet: false,
+    isAuthenticatedWorldID: true,
+    isOrbVerified: identifiers.some(isOrbVerifiedIdentifier),
+    user: {},
+    extra: {},
+    worldId: {
+      sessionId,
+      identifiers,
+      action: config.action,
+      verifiedAt: payload.created_at || new Date().toISOString(),
+      protocolVersion: '4.0',
+    },
+  }
+
+  const session1 = await updateSession(options)(session)
+  if (options.callbacks?.onSignIn) {
+    await options.callbacks.onSignIn(session1.user)
+  }
+
+  return NextResponse.json(session1)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -168,74 +293,14 @@ export const handler = (options: WorldAuthOptions) => async (req: NextRequest): 
   const options0: WorldAuthOptions0 = { ...defaultWorldAuthOptions, ...options }
 
   switch (req.nextUrl.pathname) {
-    case '/api/auth/callback':
-      // World ID callback
-      if (req.method === 'GET') {
-        const code = req.nextUrl.searchParams.get('code')
-        if (!code) {
-          return NextResponse.json({ status: 'error', message: 'No code provided' }, { status: 400 })
-        }
-
-        const data = new URLSearchParams()
-        data.append('code', code)
-        data.append('grant_type', 'authorization_code')
-        const redirectUri = process.env.NEXT_PUBLIC_WLD_REDIRECT_URI
-        if (!redirectUri) {
-          return redirectCallbackError(req, options0, 'world-id-config')
-        }
-        data.append('redirect_uri', redirectUri)
-
-        const clientId = process.env.WLD_CLIENT_ID
-        const clientSecret = process.env.WLD_CLIENT_SECRET
-        if (!clientId || !clientSecret) {
-          return redirectCallbackError(req, options0, 'world-id-config')
-        }
-        let idToken: string | undefined
-        try {
-          const res = await fetch('https://id.worldcoin.org/token', {
-            method: 'POST',
-            headers: {
-              Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: data,
-          })
-          if (!res.ok) {
-            return redirectCallbackError(req, options0, 'world-id-token')
-          }
-          const tokenResponse = (await res.json()) as WorldIdTokenResponse
-          idToken = tokenResponse.id_token
-        } catch {
-          return redirectCallbackError(req, options0, 'world-id-token')
-        }
-        if (!idToken) {
-          return redirectCallbackError(req, options0, 'world-id-token')
-        }
-        let decoded: WorldIdTokenClaims
-        try {
-          decoded = decodeJwt(idToken)
-        } catch {
-          return redirectCallbackError(req, options0, 'world-id-token')
-        }
-        const { email } = decoded
-        if (!email) {
-          return redirectCallbackError(req, options0, 'world-id-token')
-        }
-        const verificationLevel = decoded['https://id.worldcoin.org/v1']?.verification_level
-        const session: Session = {
-          isAuthenticatedWallet: false,
-          isAuthenticatedWorldID: true,
-          isOrbVerified: verificationLevel === 'orb',
-          user: {
-            appWorldID: email
-          },
-          extra: {}
-        }
-        await updateSession(options0)(session)
-        if(options.callbacks?.onSignIn) {
-          await options.callbacks.onSignIn(session.user)
-        }
-        return NextResponse.redirect(getCallbackRedirectUrl(req))
+    case '/api/miniauth/worldid/rp-context':
+      if (req.method === 'POST') {
+        return getWorldIdRpContext()
+      }
+      break
+    case '/api/miniauth/worldid/verify':
+      if (req.method === 'POST') {
+        return verifyWorldId(options0)(req)
       }
       break
     case '/api/miniauth/nonce':
@@ -253,29 +318,28 @@ export const handler = (options: WorldAuthOptions) => async (req: NextRequest): 
       break
     case '/api/miniauth/session':
       if (req.method === 'GET') {
-        const s = await session(options0)(req)
-        return s
+        return session(options0)(req)
       }
       break
-      case '/api/miniauth/logout':
-        if (req.method === 'POST') {
-          const session = await deleteSession(options0)
-          if(options.callbacks?.onSignOut && session && session?.user) {
-            await options.callbacks.onSignOut(session?.user)
-          }
-          return NextResponse.json({ success: true })
+    case '/api/miniauth/logout':
+      if (req.method === 'POST') {
+        const session = await deleteSession(options0)
+        if (options.callbacks?.onSignOut && session && session.user) {
+          await options.callbacks.onSignOut(session.user)
         }
-        break
-        case '/api/miniauth/augment':
-          if (req.method === 'POST') {
-            const { key, data } = await req.json()
-            if (typeof key === 'string' && key.length > 0 && (data === null || typeof data === 'object')) {
-              const session = await augmentSession(options0)(key, data)
-              return NextResponse.json(session)
-            }
-            return NextResponse.json({ status: 'error' }, { status: 400 })
-          }
-          break
+        return NextResponse.json({ success: true })
+      }
+      break
+    case '/api/miniauth/augment':
+      if (req.method === 'POST') {
+        const { key, data } = await req.json()
+        if (typeof key === 'string' && key.length > 0 && (data === null || typeof data === 'object')) {
+          const session = await augmentSession(options0)(key, data)
+          return NextResponse.json(session)
+        }
+        return NextResponse.json({ status: 'error' }, { status: 400 })
+      }
+      break
     default:
       break
   }

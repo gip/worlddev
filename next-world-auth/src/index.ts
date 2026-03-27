@@ -2,7 +2,7 @@ import { handler, getSession } from './handler'
 import { WorldAuthOptions, defaultWorldAuthOptions } from './options'
 export type { WorldAuthOptions }
 
-export type { Session, User, MyLocation } from './types'
+export type { Session, User, MyLocation, WorldIdSession, WorldIdStatus } from './types'
 
 export { getSession as getServerSession }
 
