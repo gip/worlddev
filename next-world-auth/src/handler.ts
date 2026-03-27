@@ -9,10 +9,37 @@ type IRequestPayload = {
   nonce: string
 }
 
-const decodeJwt = (token: string): Record<string, any> => {
+type WorldIdTokenClaims = {
+  email?: string
+  'https://id.worldcoin.org/v1'?: {
+    verification_level?: string
+  }
+}
+
+type WorldIdTokenResponse = {
+  id_token?: string
+}
+
+const decodeJwt = (token: string): WorldIdTokenClaims => {
   const payload = token.split('.')[1]
+  if (!payload) {
+    throw new Error('Invalid JWT payload')
+  }
   const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
-  return JSON.parse(decoded)
+  return JSON.parse(decoded) as WorldIdTokenClaims
+}
+
+const getCallbackRedirectUrl = (req: NextRequest, error?: string) => {
+  const redirectUrl = new URL('/', process.env.WLD_SERVER || req.nextUrl.origin)
+  if (error) {
+    redirectUrl.searchParams.set('error', error)
+  }
+  return redirectUrl
+}
+
+const redirectCallbackError = async (req: NextRequest, options: WorldAuthOptions0, error: string) => {
+  await deleteSession(options)
+  return NextResponse.redirect(getCallbackRedirectUrl(req, error))
 }
 
 const deleteSession = async (options: WorldAuthOptions0): Promise<Session | null> => {
@@ -41,7 +68,7 @@ const updateSession = (options: WorldAuthOptions0) => async (session: Session): 
   if(!session0) {
     session1 = session
   } else {
-    let user1 = { ...session0.user, ...session.user }
+    const user1 = { ...session0.user, ...session.user }
     session1 = {
       isAuthenticatedWallet: session0.isAuthenticatedWallet || session.isAuthenticatedWallet,
       isAuthenticatedWorldID: session0.isAuthenticatedWorldID || session.isAuthenticatedWorldID,
@@ -89,7 +116,7 @@ const completeSiwe = (options: WorldAuthOptions) => async (req: NextRequest) => 
   const options0: WorldAuthOptions0 = { ...defaultWorldAuthOptions, ...options }
   const { payload, nonce, user } = (await req.json()) as (IRequestPayload & { user: User })
 
-  if (nonce != (await cookies()).get(options0.cookieNonceName)?.value) {
+  if (nonce !== (await cookies()).get(options0.cookieNonceName)?.value) {
       await deleteSession(options0)
       return NextResponse.json({
       status: 'error',
@@ -122,7 +149,7 @@ const completeSiwe = (options: WorldAuthOptions) => async (req: NextRequest) => 
       await options.callbacks.onSignIn(session.user)
     }
     return NextResponse.json(session1)
-  } catch (error: unknown) {
+  } catch {
     await deleteSession(options0)
     return NextResponse.json(null)
   }
@@ -152,23 +179,50 @@ export const handler = (options: WorldAuthOptions) => async (req: NextRequest): 
         const data = new URLSearchParams()
         data.append('code', code)
         data.append('grant_type', 'authorization_code')
-        data.append('redirect_uri', process.env.NEXT_PUBLIC_WLD_REDIRECT_URI || '')
+        const redirectUri = process.env.NEXT_PUBLIC_WLD_REDIRECT_URI
+        if (!redirectUri) {
+          return redirectCallbackError(req, options0, 'world-id-config')
+        }
+        data.append('redirect_uri', redirectUri)
 
         const clientId = process.env.WLD_CLIENT_ID
         const clientSecret = process.env.WLD_CLIENT_SECRET
-        const res = await fetch('https://id.worldcoin.org/token', {
-          method: 'POST',
-          headers: {
-            Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: data,
-        })
-        const { id_token } = await res.json()
-        const decoded = decodeJwt(id_token)
+        if (!clientId || !clientSecret) {
+          return redirectCallbackError(req, options0, 'world-id-config')
+        }
+        let idToken: string | undefined
+        try {
+          const res = await fetch('https://id.worldcoin.org/token', {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: data,
+          })
+          if (!res.ok) {
+            return redirectCallbackError(req, options0, 'world-id-token')
+          }
+          const tokenResponse = (await res.json()) as WorldIdTokenResponse
+          idToken = tokenResponse.id_token
+        } catch {
+          return redirectCallbackError(req, options0, 'world-id-token')
+        }
+        if (!idToken) {
+          return redirectCallbackError(req, options0, 'world-id-token')
+        }
+        let decoded: WorldIdTokenClaims
+        try {
+          decoded = decodeJwt(idToken)
+        } catch {
+          return redirectCallbackError(req, options0, 'world-id-token')
+        }
         const { email } = decoded
-        const verificationLevel = decoded['https://id.worldcoin.org/v1']['verification_level']
-        let session: Session = {
+        if (!email) {
+          return redirectCallbackError(req, options0, 'world-id-token')
+        }
+        const verificationLevel = decoded['https://id.worldcoin.org/v1']?.verification_level
+        const session: Session = {
           isAuthenticatedWallet: false,
           isAuthenticatedWorldID: true,
           isOrbVerified: verificationLevel === 'orb',
@@ -181,7 +235,7 @@ export const handler = (options: WorldAuthOptions) => async (req: NextRequest): 
         if(options.callbacks?.onSignIn) {
           await options.callbacks.onSignIn(session.user)
         }
-        return NextResponse.redirect(`${process.env.WLD_SERVER}/`)
+        return NextResponse.redirect(getCallbackRedirectUrl(req))
       }
       break
     case '/api/miniauth/nonce':
@@ -215,7 +269,7 @@ export const handler = (options: WorldAuthOptions) => async (req: NextRequest): 
         case '/api/miniauth/augment':
           if (req.method === 'POST') {
             const { key, data } = await req.json()
-            if (key && typeof data === 'object' && data !== null) {
+            if (typeof key === 'string' && key.length > 0 && (data === null || typeof data === 'object')) {
               const session = await augmentSession(options0)(key, data)
               return NextResponse.json(session)
             }
